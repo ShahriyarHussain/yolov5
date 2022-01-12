@@ -24,6 +24,7 @@ Usage - formats:
                                          yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
 """
 
+from time import time, process_time
 from utils.torch_utils import select_device, time_sync
 from utils.plots import Annotator, colors, save_one_box
 from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
@@ -75,6 +76,9 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
         dnn=False,  # use OpenCV DNN for ONNX inference
         ):
     source = str(source)
+    # filename = source.split(".")[0] + ".txt"
+    datafile = open("detectvideo.txt", 'x')
+    startTime = process_time()
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -155,11 +159,19 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 # Print results
+                current_time = startTime
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
-                    cv2.putText(im0, f"Vehicles: {n}", (20, 100), cv2.FONT_HERSHEY_PLAIN,
-                                4, (0, 0, 229), 4, cv2.LINE_AA)
+                    time_passed = process_time() - current_time
+                    if(time_passed > 5):
+                        current_time = process_time()
+                        add_to_file = f"{n} vehicles\n"
+                        with open("detectvideo.txt", 'a') as f:
+                            f.writelines('\n'.join([add_to_file]))
+                    # Show number of objects in top left
+                    cv2.putText(im0, f"{names[int(c)]}: {n}", (20, 100),
+                                cv2.FONT_HERSHEY_PLAIN, 4, (0, 0, 229), 4, cv2.LINE_AA)
                     # s += f"{n} wowzas"  # add to string
 
                 # Write results
